@@ -1,0 +1,1 @@
+{ "name": "recipe-menu-ai", "version": "1.0.0", "description": "Recipe to menu costing, powered by a local open-source LLM (Ollama)", "main": "server.js", "scripts": { "start": "node server.js" }, "engines": { "node": ">=18" } }

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recipe → Menu Costing</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#faf6ef;--card:#fff;--ink:#2a2118;--mut:#7a6d5e;--line:#e8dfd0;--acc:#c2410c;--acc2:#fde7d6;--ok:#2f7d4f}
+@media (prefers-color-scheme:dark){:root{--bg:#171310;--card:#221c17;--ink:#f3ebe0;--mut:#a89a89;--line:#3a3128;--acc:#fb923c;--acc2:#3b2615;--ok:#6cc58f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+h1{font:700 26px/1.2 Georgia,serif;margin:0 0 4px}h2{font:600 18px Georgia,serif;margin:0 0 10px}
+.sub{color:var(--mut);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+textarea,input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px}
+textarea{min-height:150px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+label{font-size:12px;color:var(--mut);display:block;margin-bottom:3px}
+button{font:inherit;cursor:pointer;border:0;border-radius:9px;padding:10px 16px;background:var(--acc);color:#fff;font-weight:600}
+button.g{background:var(--acc2);color:var(--acc)}button:disabled{opacity:.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{background:var(--acc2);color:var(--acc);border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
+.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:420px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:14px}th{color:var(--mut);font-weight:500;font-size:12px}
+td.n,th.n{text-align:right}td input{padding:4px 6px;width:90px;text-align:right}td input.miss{border-color:var(--acc)}
+.tot td{font-weight:700;border-top:2px solid var(--ink)}
+.pill{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;background:var(--acc2);color:var(--acc);margin-right:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.item{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;justify-content:space-between;gap:8px}
+.item small{color:var(--mut)}.x{background:none;color:var(--mut);padding:0 6px}
+.big{font:700 24px Georgia,serif;color:var(--ok)}
+ol{padding-left:20px;margin:6px 0}.err{color:#c0392b}.hide{display:none}.warn{color:var(--acc)}
+.cat{font:600 14px system-ui;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin:14px 0 8px}
+</style></head><body><main>
+<h1>🍲 Recipe → Menu Costing</h1>
+<p class="sub">Paste your recipe in any language, in everyday words. A local open-source AI turns it into a standard recipe with a menu name and category, then costs it including electricity, water, labour and other hidden costs. <span id="health"></span></p>
+
+<div class="card">
+  <label for="inp">Your recipe (any language, casual wording and missing amounts are fine)</label>
+  <textarea id="inp" placeholder="e.g. aloo ko ubaal lo, pyaaz tamatar bhoon ke masala daalo, gobhi milao, dhak ke pakne do..."></textarea>
+  <div class="chips" id="ex"></div>
+  <div class="row">
+    <div><label>Servings (if recipe doesn't say)</label><input id="srv" type="number" min="1" value="4"></div>
+    <div><label>Currency</label><select id="cur"></select></div>
+    <div><label>Electricity / kWh</label><input id="tar" type="number" step="0.1" value="8"></div>
+    <div><label>Labour / hour</label><input id="wage" type="number" step="1" value="120"></div>
+  </div>
+  <div class="row">
+    <div><label>Water / 100 L</label><input id="wat" type="number" step="0.5" value="5"></div>
+    <div><label>Packaging / serving</label><input id="pack" type="number" step="0.5" value="5"></div>
+    <div><label>Overhead % (rent, cleaning)</label><input id="ovh" type="number" value="12"></div>
+    <div><label>Wastage % of ingredients</label><input id="wst" type="number" value="6"></div>
+    <div><label>Target margin %</label><input id="mar" type="number" value="60"></div>
+  </div>
+  <p style="margin:12px 0 0"><button id="go">Convert, cost &amp; categorise</button> <span id="msg" class="sub"></span></p>
+</div>
+
+<div id="res" class="card hide"></div>
+
+<div class="card">
+  <h2>📋 Menu</h2><div id="menu"></div>
+  <p><button class="g" id="dl">Download menu (CSV)</button> <button class="g" id="clr">Clear menu</button></p>
+</div>
+<p class="sub">Ingredient prices come from <code>prices.json</code> (edit it for your market). Ingredients not found there are flagged for you to price. Energy and water are estimated from cooking time and appliance.</p>
+</main>
+<script>
+const CUR={INR:'₹',USD:'$',EUR:'€',GBP:'£',JPY:'¥',AED:'AED ',AUD:'A$',CAD:'C$'};
+const CATS=['Starters & Snacks','Soups & Salads','Main Course','Rice, Noodles & Breads','Desserts','Beverages','Breakfast','Sides & Sauces'];
+const KW={gas:1.5,induction:1.8,oven:2.2,microwave:1.0,none:0.3}; // appliance power in kW (kWh-equivalent for gas)
+const $=id=>document.getElementById(id);
+let menu=[],cur=null,RATES={INR:1,USD:0.012,EUR:0.011,GBP:0.0094,JPY:1.8,AED:0.044,AUD:0.018,CAD:0.016};
+try{menu=JSON.parse(localStorage.getItem('menu_v1')||'[]')}catch(e){}
+$('cur').innerHTML=Object.keys(CUR).map(k=>`<option>${k}</option>`).join('');
+[['Hindi','आलू और गोभी काटो। कड़ाही में तेल गरम करो, जीरा, प्याज़, टमाटर भूनो। हल्दी, नमक, मिर्च, गरम मसाला डालो। आलू गोभी मिलाकर ढककर पकाओ। 4 लोगों के लिए।'],['Spanish','Sofríe cebolla y ajo, añade arroz, caldo, azafrán, gambas y mejillones. Cocina 20 minutos sin remover. Para 4 personas.'],['English','mix curd, 2 mangoes, a bit sugar, cardamom and ice in blender till smooth. serves 2'],['French','Fais dorer le poulet avec beurre, thym, ail et citron. Mets au four 45 minutes. Pour 4.']].forEach(([l,t])=>{const c=document.createElement('span');c.className='chip';c.textContent=l+' example';c.onclick=()=>$('inp').value=t;$('ex').appendChild(c)});
+const rate=()=>RATES[$('cur').value]||1, sym=()=>CUR[$('cur').value];
+const f=n=>sym()+(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const save=()=>{try{localStorage.setItem('menu_v1',JSON.stringify(menu))}catch(e){}};
+
+fetch('/api/health').then(r=>r.json()).then(h=>{$('health').innerHTML=h.ok?(h.installed?`<b style="color:var(--ok)">● Model ${esc(h.model)} ready</b>`:`<b class="warn">● Run: ollama pull ${esc(h.model)}</b>`):'<b class="err">● Ollama not reachable — start it first</b>'}).catch(()=>{});
+
+$('go').onclick=async()=>{
+  const t=$('inp').value.trim(); if(!t)return;
+  $('go').disabled=true;$('msg').textContent='Standardising your recipe (first run can take a minute)…';
+  try{
+    const res=await fetch('/api/convert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,servings:+$('srv').value||4})});
+    const j=await res.json(); if(!res.ok)throw new Error(j.error||'Request failed');
+    RATES=j.rates||RATES;cur=j.recipe;render();$('msg').textContent='';
+  }catch(e){$('msg').innerHTML='<span class="err">'+esc(e.message)+'</span>'}
+  $('go').disabled=false;
+};
+
+function calc(r){
+  const R=rate(),p=x=>+$(x).value||0;
+  const ing=r.ingredients.reduce((a,i)=>a+(i.price||0),0)*R;
+  const kwh=KW[r.heat_source]*(r.cook_min/60)*0.7+0.3*(r.prep_min/60)*0.5, water=4+1.5*r.servings;
+  const waste=ing*p('wst')/100,elec=kwh*p('tar'),wat=water/100*p('wat');
+  const lab=(r.prep_min+r.cook_min)/60*p('wage'),pack=p('pack')*r.servings;
+  const direct=ing+waste+elec+wat+lab+pack,ovh=direct*p('ovh')/100,total=direct+ovh;
+  const per=total/r.servings,price=per/(1-Math.min(p('mar'),95)/100);
+  return {ing,waste,elec,wat,lab,pack,ovh,total,per,price,kwh,water};
+}
+function render(){
+  const r=cur;if(!r)return;const k=calc(r),R=rate();
+  const row=(a,b)=>`<tr><td>${a}</td><td class="n">${f(b)}</td></tr>`;
+  const miss=r.ingredients.filter(i=>i.price==null).length;
+  $('res').classList.remove('hide');
+  $('res').innerHTML=`<h2>${esc(r.name)}</h2>
+  <p><span class="pill">${esc(r.category)}</span><span class="pill">${esc(r.cuisine||'')}</span><span class="pill">${esc(r.language||'')}${r.original_name&&r.original_name!==r.name?' · “'+esc(r.original_name)+'”':''}</span></p>
+  <p class="sub">${esc(r.description||'')} · ${r.servings} servings · prep ${r.prep_min} min · cook ${r.cook_min} min · ${esc(r.heat_source)}</p>
+  <div class="grid"><div><h2 style="font-size:15px">Ingredients</h2>${miss?`<p class="warn" style="margin:0 0 6px">⚠ ${miss} item(s) not in price list — enter a cost.</p>`:''}<div class="scroll"><table><tr><th>Item</th><th>Amount</th><th class="n">Cost</th></tr>
+  ${r.ingredients.map((i,n)=>`<tr><td>${esc(i.name)}</td><td>${i.qty} ${esc(i.unit)}</td><td class="n"><input type="number" step="0.5" class="${i.price==null?'miss':''}" value="${i.price==null?'':(i.price*R).toFixed(2)}" placeholder="?" data-i="${n}"></td></tr>`).join('')}
+  </table></div></div>
+  <div><h2 style="font-size:15px">Cost breakdown</h2><div class="scroll"><table>
+  ${row('Ingredients',k.ing)}${row('Wastage / trimming',k.waste)}${row('Electricity &amp; fuel ('+k.kwh.toFixed(2)+' kWh)',k.elec)}${row('Water (~'+k.water.toFixed(0)+' L)',k.wat)}${row('Labour',k.lab)}${row('Packaging',k.pack)}${row('Overhead (rent, cleaning, misc.)',k.ovh)}
+  <tr class="tot"><td>Total batch cost</td><td class="n">${f(k.total)}</td></tr>
+  <tr><td>Cost per serving</td><td class="n">${f(k.per)}</td></tr></table></div>
+  <p>Hidden costs add <b>${f(k.total-k.ing)}</b> (${k.total?Math.round((k.total-k.ing)/k.total*100):0}% of total) on top of ingredients.</p>
+  <p class="sub" style="margin:0">Suggested menu price (${$('mar').value}% margin)</p><div class="big">${f(k.price)}</div></div></div>
+  <h2 style="font-size:15px;margin-top:14px">Method</h2><ol>${r.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+  <p><button id="add">Add to menu → ${esc(r.category)}</button></p>`;
+  $('res').querySelectorAll('input[data-i]').forEach(e=>e.onchange=()=>{r.ingredients[e.dataset.i].price=e.value===''?null:(+e.value)/R;render()});
+  $('add').onclick=()=>{const k=calc(r);
+    menu=menu.filter(m=>m.name!==r.name);
+    menu.push({name:r.name,original:r.original_name,category:r.category,cost:k.per,price:k.price,cur:$('cur').value,servings:r.servings});
+    save();renderMenu();$('add').textContent='✓ Added';};
+}
+function renderMenu(){
+  if(!menu.length){$('menu').innerHTML='<p class="sub">Nothing yet. Convert a recipe and add it.</p>';return}
+  $('menu').innerHTML=CATS.filter(c=>menu.some(m=>m.category===c)).map(c=>`<div class="cat">${esc(c)}</div><div class="grid">`+
+   menu.map((m,i)=>m.category===c?`<div class="item"><div><b>${esc(m.name)}</b><br><small>${m.original&&m.original!==m.name?esc(m.original)+' · ':''}cost ${CUR[m.cur]}${m.cost.toFixed(2)}/serving</small></div><div style="text-align:right"><b>${CUR[m.cur]}${m.price.toFixed(2)}</b><button class="x" data-d="${i}" title="Remove">✕</button></div></div>`:'').join('')+'</div>').join('');
+  $('menu').querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{menu.splice(+b.dataset.d,1);save();renderMenu()});
+}
+['tar','wage','wat','pack','ovh','wst','mar','cur'].forEach(id=>$(id).onchange=()=>render());
+$('clr').onclick=()=>{menu=[];save();renderMenu()};
+$('dl').onclick=()=>{
+  const csv='Category,Dish,Cost per serving,Menu price,Currency\n'+menu.map(m=>[m.category,m.name,m.cost.toFixed(2),m.price.toFixed(2),m.cur].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='menu.csv';a.click();
+};
+renderMenu();
+</script></body></html>
