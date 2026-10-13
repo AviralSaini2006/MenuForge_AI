@@ -28,6 +28,20 @@
     "black pepper": {"per":"kg","price":900}, "pepper": {"per":"kg","price":900}, "cardamom": {"per":"kg","price":3500},
     "cinnamon": {"per":"kg","price":800}, "saffron": {"per":"kg","price":250000}, "mustard seed": {"per":"kg","price":150},
     "thyme": {"per":"kg","price":800}, "tea": {"per":"kg","price":400}, "coffee": {"per":"kg","price":800},
-    "soy sauce": {"per":"l","price":200}, "vinegar": {"per":"l","price":60}, "stock": {"per":"l","price":40}, "broth": {"per":"l","price":40}
+    "soy sauce": {"per":"l","price":200}, "vinegar": {"per":"l","price":60}, "stock": {"per":"l","price":40}, "broth": {"per":"l","price":40},
+    "mint": {"per":"kg","price":120},
+"bay leaf": {"per":"kg","price":600},
+"clove": {"per":"kg","price":1200},
+"curry leaves": {"per":"kg","price":150},
+"biryani masala": {"per":"kg","price":800},
+"cumin seed": {"per":"kg","price":400},
+"coriander seed": {"per":"kg","price":250},
+"green cardamom": {"per":"kg","price":3500},
+"star anise": {"per":"kg","price":1500},
+"nutmeg": {"per":"kg","price":1200},
+"kasuri methi": {"per":"kg","price":800},
+"ginger garlic paste": {"per":"kg","price":180},
+"green peas": {"per":"kg","price":100} 
+    
   }
 }

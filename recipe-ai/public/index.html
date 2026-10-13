@@ -52,6 +52,15 @@ ol{padding-left:20px;margin:6px 0}.err{color:#c0392b}.hide{display:none}.warn{co
     <div><label>Target margin %</label><input id="mar" type="number" value="60"></div>
   </div>
   <p style="margin:12px 0 0"><button id="go">Convert, cost &amp; categorise</button> <span id="msg" class="sub"></span></p>
+
+
+<!-- Speech-to-text button -->
+<p>
+  <button id="micBtn" type="button">🎙️ Speak</button>
+  <span id="speechStatus"></span>
+</p>
+
+</div>
 </div>
 
 <div id="res" class="card hide"></div>
@@ -67,6 +76,119 @@ const CUR={INR:'₹',USD:'$',EUR:'€',GBP:'£',JPY:'¥',AED:'AED ',AUD:'A$',CAD
 const CATS=['Starters & Snacks','Soups & Salads','Main Course','Rice, Noodles & Breads','Desserts','Beverages','Breakfast','Sides & Sauces'];
 const KW={gas:1.5,induction:1.8,oven:2.2,microwave:1.0,none:0.3}; // appliance power in kW (kWh-equivalent for gas)
 const $=id=>document.getElementById(id);
+
+
+
+const micBtn = document.getElementById("micBtn");
+const speechStatus = document.getElementById("speechStatus");
+const recipeBox = document.getElementById("inp");
+
+let mediaRecorder = null;
+let audioChunks = [];
+let micStream = null;
+let recording = false;
+
+micBtn.addEventListener("click", async () => {
+  if (recording) {
+    mediaRecorder.stop();
+    recording = false;
+    micBtn.textContent = "Speak";
+    speechStatus.textContent = "Transcribing locally...";
+    return;
+  }
+
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: true
+    });
+
+    audioChunks = [];
+
+    const preferredType = MediaRecorder.isTypeSupported(
+      "audio/webm;codecs=opus"
+    ) ? "audio/webm;codecs=opus" : "";
+
+    mediaRecorder = preferredType
+      ? new MediaRecorder(micStream, { mimeType: preferredType })
+      : new MediaRecorder(micStream);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) audioChunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      try {
+        const audioBlob = new Blob(audioChunks, {
+          type: mediaRecorder.mimeType || "audio/webm"
+        });
+
+        if (audioBlob.size === 0) {
+          throw new Error("No audio was recorded.");
+        }
+
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
+        formData.append("language", "en");
+
+        const response = await fetch(
+          "http://127.0.0.1:5001/transcribe",
+          {
+            method: "POST",
+            body: formData
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Transcription failed.");
+        }
+
+        if (!result.text) {
+          speechStatus.textContent =
+            "No speech detected. Try speaking louder.";
+          return;
+        }
+
+        recipeBox.value = (
+          recipeBox.value.trim()
+            ? recipeBox.value.trim() + "\n"
+            : ""
+        ) + result.text;
+
+        recipeBox.dispatchEvent(
+          new Event("input", { bubbles: true })
+        );
+
+        speechStatus.textContent =
+          "Done! Review your recipe text.";
+      } catch (error) {
+        console.error("Local transcription error:", error);
+        speechStatus.textContent =
+          "Transcription failed: " + error.message;
+      } finally {
+        if (micStream) {
+          micStream.getTracks().forEach(track => track.stop());
+          micStream = null;
+        }
+        micBtn.disabled = false;
+      }
+    };
+
+    mediaRecorder.start();
+    recording = true;
+    micBtn.textContent = "Stop recording";
+    speechStatus.textContent = "Recording... Speak your recipe.";
+  } catch (error) {
+    console.error("Microphone error:", error);
+    speechStatus.textContent =
+      "Microphone error: " + error.message;
+    micBtn.disabled = false;
+  }
+});
+
+
+
 let menu=[],cur=null,RATES={INR:1,USD:0.012,EUR:0.011,GBP:0.0094,JPY:1.8,AED:0.044,AUD:0.018,CAD:0.016};
 try{menu=JSON.parse(localStorage.getItem('menu_v1')||'[]')}catch(e){}
 $('cur').innerHTML=Object.keys(CUR).map(k=>`<option>${k}</option>`).join('');
@@ -89,16 +211,72 @@ $('go').onclick=async()=>{
   $('go').disabled=false;
 };
 
-function calc(r){
-  const R=rate(),p=x=>+$(x).value||0;
-  const ing=r.ingredients.reduce((a,i)=>a+(i.price||0),0)*R;
-  const kwh=KW[r.heat_source]*(r.cook_min/60)*0.7+0.3*(r.prep_min/60)*0.5, water=4+1.5*r.servings;
-  const waste=ing*p('wst')/100,elec=kwh*p('tar'),wat=water/100*p('wat');
-  const lab=(r.prep_min+r.cook_min)/60*p('wage'),pack=p('pack')*r.servings;
-  const direct=ing+waste+elec+wat+lab+pack,ovh=direct*p('ovh')/100,total=direct+ovh;
-  const per=total/r.servings,price=per/(1-Math.min(p('mar'),95)/100);
-  return {ing,waste,elec,wat,lab,pack,ovh,total,per,price,kwh,water};
+
+function calc(r) {
+  const R = rate();
+  const p = id => {
+    const value = Number($(id).value);
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const missing = r.ingredients.filter(
+    i => i.price == null || !Number.isFinite(Number(i.price)) || Number(i.price) < 0
+  ).length;
+
+  // Missing ingredient prices must never be silently treated as free.
+  const ing = r.ingredients.reduce(
+    (sum, i) => sum + (i.price == null ? 0 : Number(i.price)),
+    0
+  ) * R;
+
+  const servings = Number(r.servings);
+  const prep = Number(r.prep_min);
+  const cook = Number(r.cook_min);
+  const margin = p('mar');
+  const overheadRate = p('ovh');
+  const wastageRate = p('wst');
+  const wage = p('wage');
+  const tariff = p('tar');
+  const waterRate = p('wat');
+  const packagingRate = p('pack');
+
+  const valid =
+    Number.isFinite(servings) && servings > 0 &&
+    Number.isFinite(prep) && prep >= 0 &&
+    Number.isFinite(cook) && cook >= 0 &&
+    margin >= 0 && margin < 100 &&
+    overheadRate >= 0 &&
+    wastageRate >= 0 &&
+    wage >= 0 &&
+    tariff >= 0 &&
+    waterRate >= 0 &&
+    packagingRate >= 0;
+
+  const kwh =
+    (KW[r.heat_source] ?? 0) * (cook / 60) * 0.7 +
+    0.3 * (prep / 60) * 0.5;
+
+  const water = 4 + 1.5 * servings;
+  const waste = ing * wastageRate / 100;
+  const elec = kwh * tariff * R;
+  const wat = water / 100 * waterRate * R;
+  const lab = (prep + cook) / 60 * wage * R;
+  const pack = packagingRate * servings * R;
+
+  const direct = ing + waste + elec + wat + lab + pack;
+  const ovh = direct * overheadRate / 100;
+  const total = direct + ovh;
+  const per = total / servings;
+
+  const canPrice = valid && missing === 0;
+  const price = canPrice ? per / (1 - margin / 100) : null;
+
+  return {
+    ing, waste, elec, wat, lab, pack, ovh, total, per, price,
+    kwh, water, missing, valid
+  };
 }
+
 function render(){
   const r=cur;if(!r)return;const k=calc(r),R=rate();
   const row=(a,b)=>`<tr><td>${a}</td><td class="n">${f(b)}</td></tr>`;
@@ -115,9 +293,15 @@ function render(){
   <tr class="tot"><td>Total batch cost</td><td class="n">${f(k.total)}</td></tr>
   <tr><td>Cost per serving</td><td class="n">${f(k.per)}</td></tr></table></div>
   <p>Hidden costs add <b>${f(k.total-k.ing)}</b> (${k.total?Math.round((k.total-k.ing)/k.total*100):0}% of total) on top of ingredients.</p>
-  <p class="sub" style="margin:0">Suggested menu price (${$('mar').value}% margin)</p><div class="big">${f(k.price)}</div></div></div>
+  <p class="sub" style="margin:0">Suggested menu price</p>
+${k.missing
+  ? `<p class="warn">Enter valid costs for all ${k.missing} missing or invalid ingredient(s) before pricing this dish.</p>`
+  : !k.valid
+    ? '<p class="warn">Check your servings, margin and cost settings.</p>'
+    : `<div class="big">${f(k.price)}</div><p class="sub">Target gross margin: ${$('mar').value}%</p>`
+}</div></div>
   <h2 style="font-size:15px;margin-top:14px">Method</h2><ol>${r.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
-  <p><button id="add">Add to menu → ${esc(r.category)}</button></p>`;
+  <p><button id="add" ${k.missing || !k.valid ? 'disabled' : ''}>Add to menu → ${esc(r.category)}</button></p>`;
   $('res').querySelectorAll('input[data-i]').forEach(e=>e.onchange=()=>{r.ingredients[e.dataset.i].price=e.value===''?null:(+e.value)/R;render()});
   $('add').onclick=()=>{const k=calc(r);
     menu=menu.filter(m=>m.name!==r.name);

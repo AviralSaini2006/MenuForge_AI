@@ -44,16 +44,77 @@ async function llm(text, servings) {
 }
 
 // Ingredient price lookup from prices.json (the LLM never guesses prices). Returns INR or null if unknown.
+
 function priceOf(ing) {
-  const n = String(ing.name || '').toLowerCase();
-  const key = KEYS.find(k => n.includes(k));
-  if (!key) return null;
-  const it = PRICES.items[key], kgl = { g: .001, ml: .001, tsp: .005, tbsp: .015 }[ing.unit], pcG = it.pc_g || 100;
-  let q;
-  if (it.per === 'pc') q = ing.unit === 'pcs' ? ing.qty : ing.qty * kgl * 1000 / pcG;
-  else q = kgl !== undefined ? ing.qty * kgl : ing.qty * pcG / 1000;
-  return Math.round(q * it.price * 100) / 100;
+  if (!ing || typeof ing.name !== 'string') return null;
+
+  const name = ing.name.trim().toLowerCase().replace(/\s+/g, ' ');
+  const qty = Number(ing.qty);
+  const unit = String(ing.unit || '').toLowerCase();
+
+  if (!name || !Number.isFinite(qty) || qty <= 0) return null;
+
+  // Only accept explicit aliases; don't match arbitrary substrings.
+  const aliases = {
+    'tomatoes': 'tomato',
+    'potatoes': 'potato',
+    'onions': 'onion',
+    'eggs': 'egg',
+    'chicken breast': 'chicken',
+    'chicken breasts': 'chicken',
+    'basmati': 'basmati rice',
+    'green chilli': 'chilli',
+    'green chilies': 'chilli',
+    'cilantro leaves': 'cilantro',
+    'yoghurt': 'yogurt',
+    'black pepper powder': 'black pepper',
+    'ground black pepper': 'black pepper'
+  };
+
+  const key = aliases[name] || name;
+  const item = PRICES.items[key];
+
+  // Unknown or ambiguous ingredient names need manual review.
+  if (!item || !Number.isFinite(Number(item.price)) || Number(item.price) < 0) {
+    return null;
+  }
+
+  let amount;
+
+  if (item.per === 'kg') {
+    if (unit === 'g') {
+      amount = qty / 1000;
+    } else if (unit === 'pcs' && Number(item.pc_g) > 0) {
+      amount = qty * Number(item.pc_g) / 1000;
+    } else {
+      // Volume-to-weight conversion requires ingredient-specific density.
+      return null;
+    }
+  } else if (item.per === 'l') {
+    if (unit === 'ml') {
+      amount = qty / 1000;
+    } else if (unit === 'tsp') {
+      amount = qty * 5 / 1000;
+    } else if (unit === 'tbsp') {
+      amount = qty * 15 / 1000;
+    } else {
+      return null;
+    }
+  } else if (item.per === 'pc') {
+    if (unit === 'pcs') {
+      amount = qty;
+    } else if (unit === 'g' && Number(item.pc_g) > 0) {
+      amount = qty / Number(item.pc_g);
+    } else {
+      return null;
+    }
+  } else {
+    return null;
+  }
+
+  return Math.round(amount * Number(item.price) * 100) / 100;
 }
+
 
 function normalise(r, servings) {
   r.category = CATS.includes(r.category) ? r.category : 'Main Course';
