@@ -1,347 +1,47 @@
 {
- "_note": "Base prices in INR per kg / litre / piece. Edit to match your local market. 'rates' converts INR to other currencies (update occasionally).",
- "rates": {
-  "INR": 1,
-  "USD": 0.012,
-  "EUR": 0.011,
-  "GBP": 0.0094,
-  "JPY": 1.8,
-  "AED": 0.044,
-  "AUD": 0.018,
-  "CAD": 0.016
- },
- "items": {
-  "water": {
-   "per": "l",
-   "price": 0
-  },
-  "ice": {
-   "per": "kg",
-   "price": 5
-  },
-  "potato": {
-   "per": "kg",
-   "price": 30,
-   "pc_g": 150
-  },
-  "onion": {
-   "per": "kg",
-   "price": 35
-  },
-  "tomato": {
-   "per": "kg",
-   "price": 40,
-   "pc_g": 100
-  },
-  "garlic": {
-   "per": "kg",
-   "price": 200,
-   "pc_g": 5
-  },
-  "ginger": {
-   "per": "kg",
-   "price": 150,
-   "pc_g": 20
-  },
-  "chilli": {
-   "per": "kg",
-   "price": 80,
-   "pc_g": 5
-  },
-  "cauliflower": {
-   "per": "kg",
-   "price": 50
-  },
-  "cabbage": {
-   "per": "kg",
-   "price": 30
-  },
-  "carrot": {
-   "per": "kg",
-   "price": 50,
-   "pc_g": 80
-  },
-  "spinach": {
-   "per": "kg",
-   "price": 40
-  },
-  "peas": {
-   "per": "kg",
-   "price": 100
-  },
-  "capsicum": {
-   "per": "kg",
-   "price": 80
-  },
-  "bell pepper": {
-   "per": "kg",
-   "price": 120
-  },
-  "eggplant": {
-   "per": "kg",
-   "price": 50
-  },
-  "mushroom": {
-   "per": "kg",
-   "price": 200,
-   "pc_g": 20
-  },
-  "coriander leaves": {
-   "per": "kg",
-   "price": 100
-  },
-  "cilantro": {
-   "per": "kg",
-   "price": 100
-  },
-  "parsley": {
-   "per": "kg",
-   "price": 150
-  },
-  "lemon": {
-   "per": "pc",
-   "price": 5,
-   "pc_g": 60
-  },
-  "lime": {
-   "per": "pc",
-   "price": 4,
-   "pc_g": 50
-  },
-  "mango": {
-   "per": "pc",
-   "price": 25,
-   "pc_g": 250
-  },
-  "banana": {
-   "per": "pc",
-   "price": 6,
-   "pc_g": 120
-  },
-  "apple": {
-   "per": "kg",
-   "price": 150
-  },
-  "coconut milk": {
-   "per": "l",
-   "price": 200
-  },
-  "coconut": {
-   "per": "pc",
-   "price": 30,
-   "pc_g": 400
-  },
-  "basmati rice": {
-   "per": "kg",
-   "price": 120
-  },
-  "rice": {
-   "per": "kg",
-   "price": 70
-  },
-  "pasta": {
-   "per": "kg",
-   "price": 120
-  },
-  "noodles": {
-   "per": "kg",
-   "price": 120
-  },
-  "bread": {
-   "per": "kg",
-   "price": 55
-  },
-  "wheat flour": {
-   "per": "kg",
-   "price": 45
-  },
-  "flour": {
-   "per": "kg",
-   "price": 45
-  },
-  "semolina": {
-   "per": "kg",
-   "price": 50
-  },
-  "sugar": {
-   "per": "kg",
-   "price": 45
-  },
-  "salt": {
-   "per": "kg",
-   "price": 20
-  },
-  "honey": {
-   "per": "kg",
-   "price": 400
-  },
-  "oil": {
-   "per": "l",
-   "price": 150
-  },
-  "ghee": {
-   "per": "kg",
-   "price": 600
-  },
-  "butter": {
-   "per": "kg",
-   "price": 550
-  },
-  "milk": {
-   "per": "l",
-   "price": 60
-  },
-  "cream": {
-   "per": "l",
-   "price": 250
-  },
-  "yogurt": {
-   "per": "kg",
-   "price": 70
-  },
-  "curd": {
-   "per": "kg",
-   "price": 70
-  },
-  "paneer": {
-   "per": "kg",
-   "price": 350
-  },
-  "cheese": {
-   "per": "kg",
-   "price": 450
-  },
-  "tofu": {
-   "per": "kg",
-   "price": 200
-  },
-  "egg": {
-   "per": "pc",
-   "price": 7,
-   "pc_g": 55
-  },
-  "chicken": {
-   "per": "kg",
-   "price": 220
-  },
-  "mutton": {
-   "per": "kg",
-   "price": 750
-  },
-  "lamb": {
-   "per": "kg",
-   "price": 750
-  },
-  "fish": {
-   "per": "kg",
-   "price": 300
-  },
-  "prawn": {
-   "per": "kg",
-   "price": 500
-  },
-  "shrimp": {
-   "per": "kg",
-   "price": 500
-  },
-  "mussel": {
-   "per": "kg",
-   "price": 300
-  },
-  "lentil": {
-   "per": "kg",
-   "price": 120
-  },
-  "dal": {
-   "per": "kg",
-   "price": 120
-  },
-  "chickpea": {
-   "per": "kg",
-   "price": 100
-  },
-  "kidney bean": {
-   "per": "kg",
-   "price": 130
-  },
-  "cumin": {
-   "per": "kg",
-   "price": 400
-  },
-  "turmeric": {
-   "per": "kg",
-   "price": 250
-  },
-  "chili powder": {
-   "per": "kg",
-   "price": 350
-  },
-  "chilli powder": {
-   "per": "kg",
-   "price": 350
-  },
-  "garam masala": {
-   "per": "kg",
-   "price": 800
-  },
-  "coriander powder": {
-   "per": "kg",
-   "price": 250
-  },
-  "black pepper": {
-   "per": "kg",
-   "price": 900
-  },
-  "pepper": {
-   "per": "kg",
-   "price": 900
-  },
-  "cardamom": {
-   "per": "kg",
-   "price": 3500,
-   "pc_g": 1
-  },
-  "cinnamon": {
-   "per": "kg",
-   "price": 800,
-   "pc_g": 3
-  },
-  "saffron": {
-   "per": "kg",
-   "price": 250000,
-   "pc_g": 0.5
-  },
-  "mustard seed": {
-   "per": "kg",
-   "price": 150
-  },
-  "thyme": {
-   "per": "kg",
-   "price": 800
-  },
-  "tea": {
-   "per": "kg",
-   "price": 400
-  },
-  "coffee": {
-   "per": "kg",
-   "price": 800
-  },
-  "soy sauce": {
-   "per": "l",
-   "price": 200
-  },
-  "vinegar": {
-   "per": "l",
-   "price": 60
-  },
-  "stock": {
-   "per": "l",
-   "price": 40
-  },
-  "broth": {
-   "per": "l",
-   "price": 40
+  "_note": "Base prices in INR per kg / litre / piece. Edit to match your local market. 'rates' converts INR to other currencies (update occasionally).",
+  "rates": { "INR": 1, "USD": 0.012, "EUR": 0.011, "GBP": 0.0094, "JPY": 1.8, "AED": 0.044, "AUD": 0.018, "CAD": 0.016 },
+  "items": {
+    "water": {"per":"l","price":0}, "ice": {"per":"kg","price":5},
+    "potato": {"per":"kg","price":30}, "onion": {"per":"kg","price":35}, "tomato": {"per":"kg","price":40},
+    "garlic": {"per":"kg","price":200}, "ginger": {"per":"kg","price":150}, "chilli": {"per":"kg","price":80},
+    "cauliflower": {"per":"kg","price":50}, "cabbage": {"per":"kg","price":30}, "carrot": {"per":"kg","price":50},
+    "spinach": {"per":"kg","price":40}, "peas": {"per":"kg","price":100}, "capsicum": {"per":"kg","price":80},
+    "bell pepper": {"per":"kg","price":120}, "eggplant": {"per":"kg","price":50}, "mushroom": {"per":"kg","price":200},
+    "coriander leaves": {"per":"kg","price":100}, "cilantro": {"per":"kg","price":100}, "parsley": {"per":"kg","price":150},
+    "lemon": {"per":"pc","price":5,"pc_g":60}, "lime": {"per":"pc","price":4,"pc_g":50},
+    "mango": {"per":"pc","price":25,"pc_g":250}, "banana": {"per":"pc","price":6,"pc_g":120}, "apple": {"per":"kg","price":150},
+    "coconut milk": {"per":"l","price":200}, "coconut": {"per":"pc","price":30,"pc_g":400},
+    "basmati rice": {"per":"kg","price":120}, "rice": {"per":"kg","price":70}, "pasta": {"per":"kg","price":120},
+    "noodles": {"per":"kg","price":120}, "bread": {"per":"kg","price":55},
+    "wheat flour": {"per":"kg","price":45}, "flour": {"per":"kg","price":45}, "semolina": {"per":"kg","price":50},
+    "sugar": {"per":"kg","price":45}, "salt": {"per":"kg","price":20}, "honey": {"per":"kg","price":400},
+    "oil": {"per":"l","price":150}, "ghee": {"per":"kg","price":600}, "butter": {"per":"kg","price":550},
+    "milk": {"per":"l","price":60}, "cream": {"per":"l","price":250}, "yogurt": {"per":"kg","price":70}, "curd": {"per":"kg","price":70},
+    "paneer": {"per":"kg","price":350}, "cheese": {"per":"kg","price":450}, "tofu": {"per":"kg","price":200},
+    "egg": {"per":"pc","price":7,"pc_g":55},
+    "chicken": {"per":"kg","price":220}, "mutton": {"per":"kg","price":750}, "lamb": {"per":"kg","price":750},
+    "fish": {"per":"kg","price":300}, "prawn": {"per":"kg","price":500}, "shrimp": {"per":"kg","price":500}, "mussel": {"per":"kg","price":300},
+    "lentil": {"per":"kg","price":120}, "dal": {"per":"kg","price":120}, "chickpea": {"per":"kg","price":100}, "kidney bean": {"per":"kg","price":130},
+    "cumin": {"per":"kg","price":400}, "turmeric": {"per":"kg","price":250}, "chili powder": {"per":"kg","price":350},
+    "chilli powder": {"per":"kg","price":350}, "garam masala": {"per":"kg","price":800}, "coriander powder": {"per":"kg","price":250},
+    "black pepper": {"per":"kg","price":900}, "pepper": {"per":"kg","price":900}, "cardamom": {"per":"kg","price":3500},
+    "cinnamon": {"per":"kg","price":800}, "saffron": {"per":"kg","price":250000}, "mustard seed": {"per":"kg","price":150},
+    "thyme": {"per":"kg","price":800}, "tea": {"per":"kg","price":400}, "coffee": {"per":"kg","price":800},
+    "soy sauce": {"per":"l","price":200}, "vinegar": {"per":"l","price":60}, "stock": {"per":"l","price":40}, "broth": {"per":"l","price":40},
+    "mint": {"per":"kg","price":120},
+"bay leaf": {"per":"kg","price":600},
+"clove": {"per":"kg","price":1200},
+"curry leaves": {"per":"kg","price":150},
+"biryani masala": {"per":"kg","price":800},
+"cumin seed": {"per":"kg","price":400},
+"coriander seed": {"per":"kg","price":250},
+"green cardamom": {"per":"kg","price":3500},
+"star anise": {"per":"kg","price":1500},
+"nutmeg": {"per":"kg","price":1200},
+"kasuri methi": {"per":"kg","price":800},
+"ginger garlic paste": {"per":"kg","price":180},
+"green peas": {"per":"kg","price":100} 
+    
   }
- }
 }
