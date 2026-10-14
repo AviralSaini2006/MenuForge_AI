@@ -29,15 +29,23 @@ td.n,th.n{text-align:right}td input{padding:4px 6px;width:90px;text-align:right}
 .item small{color:var(--mut)}.x{background:none;color:var(--mut);padding:0 6px}
 .big{font:700 24px Georgia,serif;color:var(--ok)}
 ol{padding-left:20px;margin:6px 0}.err{color:#c0392b}.hide{display:none}.warn{color:var(--acc)}
+.voice{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}.voice select{width:auto}.ck{display:flex;gap:5px;align-items:center;margin:0;font-size:13px}.ck input{width:auto}
+.rec{animation:pl 1s infinite;background:#c0392b!important;color:#fff!important}@keyframes pl{50%{opacity:.6}}
 .cat{font:600 14px system-ui;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin:14px 0 8px}
 </style></head><body><main>
 <h1>🍲 Recipe → Menu Costing</h1>
-<p class="sub">Paste your recipe in any language, in everyday words. A local open-source AI turns it into a standard recipe with a menu name and category, then costs it including electricity, water, labour and other hidden costs. <span id="health"></span></p>
+<p class="sub">Speak or paste your recipe in any language, in everyday words. A local open-source AI turns it into a standard recipe with a menu name and category, then costs it including electricity, water, labour and other hidden costs. <span id="health"></span></p>
 
 <div class="card">
   <label for="inp">Your recipe (any language, casual wording and missing amounts are fine)</label>
   <textarea id="inp" placeholder="e.g. aloo ko ubaal lo, pyaaz tamatar bhoon ke masala daalo, gobhi milao, dhak ke pakne do..."></textarea>
   <div class="chips" id="ex"></div>
+  <div class="voice">
+    <button class="g" id="mic" type="button">🎤 Speak recipe</button>
+    <select id="slang" title="Spoken language"><option value="">Auto-detect language</option><option value="en">English</option><option value="hi">Hindi</option><option value="gu">Gujarati</option><option value="mr">Marathi</option><option value="bn">Bengali</option><option value="ta">Tamil</option><option value="te">Telugu</option><option value="pa">Punjabi</option><option value="ur">Urdu</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="pt">Portuguese</option><option value="it">Italian</option><option value="ar">Arabic</option><option value="zh">Chinese</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="ru">Russian</option></select>
+    <label class="ck"><input type="checkbox" id="auto"> Convert right after speaking</label>
+  </div>
+  <p class="sub" id="vmsg" style="margin:6px 0 0"></p>
   <div class="row">
     <div><label>Servings (if recipe doesn't say)</label><input id="srv" type="number" min="1" value="4"></div>
     <div><label>Currency</label><select id="cur"></select></div>
@@ -135,6 +143,34 @@ $('clr').onclick=()=>{menu=[];save();renderMenu()};
 $('dl').onclick=()=>{
   const csv='Category,Dish,Cost per serving,Menu price,Currency\n'+menu.map(m=>[m.category,m.name,m.cost.toFixed(2),m.price.toFixed(2),m.cur].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='menu.csv';a.click();
+};
+
+/* ---------- Voice input: Whisper large-v3-turbo via local faster-whisper server ---------- */
+let rec=null,chunks=[],mstream=null,vbusy=false;
+const speechStatus=()=>fetch('/api/health').then(r=>r.json()).then(h=>{if(vbusy||(rec&&rec.state==='recording'))return;$('vmsg').innerHTML=h.stt?`<span style="color:var(--ok)">● Speech model ${esc(h.stt)} ready</span>`:'<span class="warn">● Speech server not running. In a second terminal run: python stt_server.py</span>'}).catch(()=>{});
+speechStatus();
+$('mic').onclick=async()=>{
+  if(vbusy)return;
+  if(rec&&rec.state==='recording'){rec.stop();return}
+  try{mstream=await navigator.mediaDevices.getUserMedia({audio:true})}
+  catch(e){$('vmsg').innerHTML='<span class="err">Microphone blocked. Allow it using the icon in the address bar, then try again.</span>';return}
+  chunks=[];rec=new MediaRecorder(mstream);
+  rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  rec.onstop=async()=>{
+    mstream.getTracks().forEach(t=>t.stop());$('mic').classList.remove('rec');$('mic').textContent='🎤 Speak recipe';
+    vbusy=true;$('mic').disabled=true;$('vmsg').textContent='Transcribing…';
+    try{
+      const r=await fetch('/api/transcribe?lang='+encodeURIComponent($('slang').value),{method:'POST',body:new Blob(chunks,{type:rec.mimeType||'audio/webm'})});
+      const j=await r.json();if(!r.ok)throw new Error(j.error||'Transcription failed');
+      const text=(j.text||'').trim();
+      if(!text)throw new Error('No speech was detected. Try again closer to the microphone.');
+      const box=$('inp');box.value=(box.value.trim()?box.value.trim()+'\n':'')+text;
+      $('vmsg').textContent='Done (detected: '+(j.language||'?')+', '+(j.duration||0)+' s). Edit the text if needed, then convert.';
+      if($('auto').checked)$('go').click();
+    }catch(e){$('vmsg').innerHTML='<span class="err">'+esc(e.message)+'</span>'}
+    vbusy=false;$('mic').disabled=false;
+  };
+  rec.start();$('mic').classList.add('rec');$('mic').textContent='⏹ Stop';$('vmsg').textContent='Listening… speak your recipe, then press Stop.';
 };
 renderMenu();
 </script></body></html>

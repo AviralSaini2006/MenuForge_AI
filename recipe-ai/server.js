@@ -3,6 +3,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 3000;
 const OLLAMA = process.env.OLLAMA_URL || 'http://localhost:11434';
 const MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
+const STT = process.env.STT_URL || 'http://127.0.0.1:8001';
 const CATS = ['Starters & Snacks','Soups & Salads','Main Course','Rice, Noodles & Breads','Desserts','Beverages','Breakfast','Sides & Sauces'];
 const PRICES = JSON.parse(fs.readFileSync(path.join(__dirname, 'prices.json'), 'utf8'));
 const KEYS = Object.keys(PRICES.items).sort((a, b) => b.length - a.length); // longest match wins
@@ -14,7 +15,7 @@ const schema = {
     cuisine: { type: 'string' }, category: { type: 'string', enum: CATS }, description: { type: 'string' },
     servings: { type: 'number' },
     ingredients: { type: 'array', items: { type: 'object', properties: {
-      name: { type: 'string' }, qty: { type: 'number' }, unit: { type: 'string', enum: ['g','ml','pcs','tsp','tbsp'] } },
+      name: { type: 'string' }, qty: { type: 'number' }, unit: { type: 'string', enum: ['g','ml','pcs','tsp','tbsp','pinch'] } },
       required: ['name','qty','unit'] } },
     steps: { type: 'array', items: { type: 'string' } },
     prep_min: { type: 'number' }, cook_min: { type: 'number' },
@@ -26,7 +27,7 @@ const schema = {
 const SYSTEM = `You convert a home cook's recipe, written in ANY language and casual wording, into a standard English recipe.
 Rules:
 - Translate everything to English. Ingredient names must be simple, common English nouns (e.g. "potato", "cumin", "basmati rice").
-- Every ingredient needs a quantity and a unit from: g, ml, pcs, tsp, tbsp. Estimate sensible amounts when the user gave none.
+- Every ingredient needs a quantity and a unit from: g, ml, pcs, tsp, tbsp, pinch. Use pcs only for countable items (eggs, onions, garlic cloves); use pinch or tsp for spices. Estimate sensible amounts when the user gave none.
 - Use the serving count in the recipe if stated; otherwise use the default given.
 - "name" is a clear, appetising menu-style name you choose. "original_name" is what the user called it, or "" if unnamed.
 - "category" must be the best fit from the allowed list. "language" is the language of the input.
@@ -48,7 +49,7 @@ function priceOf(ing) {
   const n = String(ing.name || '').toLowerCase();
   const key = KEYS.find(k => n.includes(k));
   if (!key) return null;
-  const it = PRICES.items[key], kgl = { g: .001, ml: .001, tsp: .005, tbsp: .015 }[ing.unit], pcG = it.pc_g || 100;
+  const it = PRICES.items[key], kgl = { g: .001, ml: .001, tsp: .005, tbsp: .015, pinch: .0004 }[ing.unit], pcG = it.pc_g || 100;
   let q;
   if (it.per === 'pc') q = ing.unit === 'pcs' ? ing.qty : ing.qty * kgl * 1000 / pcG;
   else q = kgl !== undefined ? ing.qty * kgl : ing.qty * pcG / 1000;
@@ -77,10 +78,21 @@ http.createServer(async (req, res) => {
       catch (e) { out = await llm(text.trim(), +servings || 4); } // one retry on bad JSON
       return send(res, 200, { recipe: normalise(out, +servings || 4), rates: PRICES.rates, model: MODEL });
     }
+    if (req.method === 'POST' && req.url.startsWith('/api/transcribe')) {
+      const parts = []; let n = 0;
+      for await (const c of req) { n += c.length; if (n > 25e6) return send(res, 413, { error: 'Recording too long' }); parts.push(c); }
+      const lang = new URL(req.url, 'http://x').searchParams.get('lang') || '';
+      let r;
+      try { r = await fetch(`${STT}/transcribe?lang=${encodeURIComponent(lang)}`, { method: 'POST', body: Buffer.concat(parts) }); }
+      catch { return send(res, 503, { error: 'Speech server is not running. In a second terminal run: python stt_server.py' }); }
+      const j = await r.json().catch(() => ({ error: 'Bad reply from speech server' }));
+      return send(res, r.ok ? 200 : 502, j);
+    }
     if (req.url === '/api/health') {
+      const stt = await fetch(STT + '/health', { signal: AbortSignal.timeout(1500) }).then(r => r.json()).then(j => j.model).catch(() => null);
       try { const r = await fetch(OLLAMA + '/api/tags'); const j = await r.json();
-        return send(res, 200, { ok: true, model: MODEL, installed: (j.models || []).some(m => m.name.startsWith(MODEL.split(':')[0])) }); }
-      catch { return send(res, 200, { ok: false, model: MODEL }); }
+        return send(res, 200, { ok: true, model: MODEL, stt, installed: (j.models || []).some(m => m.name.startsWith(MODEL.split(':')[0])) }); }
+      catch { return send(res, 200, { ok: false, model: MODEL, stt }); }
     }
     if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
